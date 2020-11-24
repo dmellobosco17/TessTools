@@ -1,0 +1,11 @@
+{
+  "name": "com.bosco.tesstools",
+  "version": "1.0.0",
+  "displayName": "Tess Tools",
+  "description": "This tool will list all Textures in project. You can filter them by Texture Type and name. Then set desired Texture Format and apply it in bulk.",
+  "author": {
+    "name": "Bosco D'mello",
+    "email": "dmellobosco17@gmail.com"
+  },
+  "type": "tool"
+}
