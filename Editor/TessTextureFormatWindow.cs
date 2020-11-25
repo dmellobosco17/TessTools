@@ -1,38 +1,41 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEditor;
-using UnityEditor.Build.Content;
 using UnityEngine;
 
 namespace TessTools.Editor
 {
+    /// <summary>
+    /// UnityEditor window to list all textures from project and filter them by their type and names.
+    /// You can also change formatting of all textures in bulk which are filtered by given query. 
+    /// </summary>
     public class TessTextureFormatWindow : EditorWindow
     {
         private static TessTextureFormatWindow _window;
         private static TextureImporterType _textureImporterType;
         private static TextureImporterFormat _textureImporterFormat;
-        private static Vector2 scrollPos;
-        private static string filter, platform;
+        private static Vector2 _scrollPos;
+        private static string _filter, _platform;
         private static BuildTarget _target;
-        private static Material _material;
 
-        private string[] textureGuids;
-        private List<string> texturePaths;
-        private GenericMenu textureImportTypeMenu, textureImportFormatMenu;
+        private List<string> _texturePaths;
+        private GenericMenu _textureImportTypeMenu, _textureImportFormatMenu;
 
-        public static void Show()
+        /// <summary>
+        /// Launch Texture Formatting Window
+        /// </summary>
+        public static void ShowWindow()
         {
             _window = GetWindow<TessTextureFormatWindow>("Tess Texture Formatter");
             _textureImporterType = TextureImporterType.Sprite;
             _textureImporterFormat = TextureImporterFormat.Automatic;
-            _material = new Material(Shader.Find("Sprites/Default"));
             _window.FilterTextures();
 
             _target = EditorUserBuildSettings.activeBuildTarget;
-            platform = _target.ToString();
+            _platform = _target.ToString();
 
-            _window.textureImportTypeMenu = _window.TextureTypeMenu();
-            _window.textureImportFormatMenu = _window.TextureFormatMenu();
+            _window._textureImportTypeMenu = _window.TextureTypeMenu();
+            _window._textureImportFormatMenu = _window.TextureFormatMenu();
         }
 
         private void OnGUI()
@@ -40,13 +43,16 @@ namespace TessTools.Editor
             EditorGUILayout.Space();
             DrawFilterBar();
 
-            if (texturePaths.Count > 0)
+            if (_texturePaths.Count > 0)
                 DrawApplyBar();
 
             EditorGUILayout.Space(30);
             PopulateTextureList();
         }
 
+        /// <summary>
+        /// Draws the texture type select dropdown, text field and search button
+        /// </summary>
         private void DrawFilterBar()
         {
             EditorGUILayout.BeginHorizontal();
@@ -57,12 +63,12 @@ namespace TessTools.Editor
                 FocusType.Passive,
                 GUILayout.Width(200)))
             {
-                textureImportTypeMenu.ShowAsContext();
+                _textureImportTypeMenu.ShowAsContext();
             }
 
 
             GUILayout.Space(100);
-            filter = EditorGUILayout.TextField("Texture Name :", filter, GUILayout.MinWidth(300));
+            _filter = EditorGUILayout.TextField("Texture Name :", _filter, GUILayout.MinWidth(300));
 
 
             EditorGUILayout.Space(1, false);
@@ -76,6 +82,9 @@ namespace TessTools.Editor
             EditorGUILayout.EndHorizontal();
         }
 
+        /// <summary>
+        /// Draws the texture format select dropdown and apply button 
+        /// </summary>
         private void DrawApplyBar()
         {
             EditorGUILayout.BeginHorizontal();
@@ -86,7 +95,7 @@ namespace TessTools.Editor
                 FocusType.Passive,
                 GUILayout.Width(200)))
             {
-                textureImportFormatMenu.ShowAsContext();
+                _textureImportFormatMenu.ShowAsContext();
             }
 
             if (GUILayout.Button("Apply", GUILayout.Width(100), GUILayout.Height(30)))
@@ -97,12 +106,16 @@ namespace TessTools.Editor
             EditorGUILayout.EndHorizontal();
         }
 
+        /// <summary>
+        /// Draws scrolling list of textures and paths provided in <see cref="_texturePaths"/>
+        /// </summary>
         private void PopulateTextureList()
         {
-            scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
-            for (int i = 0; i < texturePaths.Count; i++)
+            _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos);
+
+            for (int i = 0; i < _texturePaths.Count; i++)
             {
-                DrawTextureItem(texturePaths[i]);
+                DrawTextureItem(_texturePaths[i]);
                 EditorGUILayout.Space();
             }
 
@@ -111,6 +124,7 @@ namespace TessTools.Editor
 
         private void DrawTextureItem(string path)
         {
+            // Load Texture
             Texture t = AssetDatabase.LoadAssetAtPath<Texture>(path);
 
             EditorGUILayout.BeginHorizontal();
@@ -128,38 +142,51 @@ namespace TessTools.Editor
 
         private void FilterTextures()
         {
-            textureGuids = AssetDatabase.FindAssets("t:Texture " + filter);
+            var textureGuids = AssetDatabase.FindAssets("t:Texture " + _filter);
 
-            texturePaths = new List<string>();
+            _texturePaths = new List<string>();
 
             for (int i = 0; i < textureGuids.Length; i++)
             {
                 string path = AssetDatabase.GUIDToAssetPath(textureGuids[i]);
-                TextureImporter importer = (TextureImporter) AssetImporter.GetAtPath(path);
+                var importer = (TextureImporter) AssetImporter.GetAtPath(path);
+
+                // Check if texture type matches the selected importType
                 if (importer.textureType == _textureImporterType)
                 {
-                    texturePaths.Add(path);
+                    _texturePaths.Add(path);
                 }
             }
         }
 
         private void ApplyFormat()
         {
-            for (int i = 0; i < texturePaths.Count; i++)
+            for (int i = 0; i < _texturePaths.Count; i++)
             {
-                string path = AssetDatabase.GUIDToAssetPath(textureGuids[i]);
-                TextureImporter importer = (TextureImporter) AssetImporter.GetAtPath(path);
-                var settings = importer.GetPlatformTextureSettings(platform);
+                // Texture importer object
+                var importer = (TextureImporter) AssetImporter.GetAtPath(_texturePaths[i]);
+
+                // Platform specific setting override object
+                var settings = importer.GetPlatformTextureSettings(_platform);
+
+                // Set selected texture format
                 settings.overridden = true;
                 settings.format = _textureImporterFormat;
                 importer.SetPlatformTextureSettings(settings);
-                AssetDatabase.ImportAsset(path);
+
+                // Reimport texture to apply changes
+                AssetDatabase.ImportAsset(_texturePaths[i]);
             }
 
+            // Refresh indices and repaint
             AssetDatabase.Refresh();
             Repaint();
         }
 
+        /// <summary>
+        /// Generates and return <see cref="GenericMenu"/> having all the values from <see cref="TextureImporterType"/>
+        /// </summary>
+        /// <returns></returns>
         private GenericMenu TextureTypeMenu()
         {
             GenericMenu menu = new GenericMenu();
@@ -171,6 +198,11 @@ namespace TessTools.Editor
             return menu;
         }
 
+        /// <summary>
+        /// Generates and return <see cref="GenericMenu"/> having all the valid values from <see cref="TextureImporterFormat"/>.
+        /// It only includes formats which are valid for the current <see cref="_textureImporterType"/> and <see cref="BuildTarget"/>.
+        /// </summary>
+        /// <returns></returns>
         private GenericMenu TextureFormatMenu()
         {
             GenericMenu menu = new GenericMenu();
@@ -184,12 +216,21 @@ namespace TessTools.Editor
             return menu;
         }
 
+        /// <summary>
+        /// Event function is called when new texture type is selected from <see cref="_textureImportTypeMenu"/>.
+        /// It also generates new <see cref="_textureImportFormatMenu"/> for new <see cref="_textureImporterType"/>.
+        /// </summary>
+        /// <param name="userdata"></param>
         private void OnSelectTextureType(object userdata)
         {
             _textureImporterType = (TextureImporterType) userdata;
-            textureImportFormatMenu = TextureFormatMenu();
+            _textureImportFormatMenu = TextureFormatMenu();
         }
 
+        /// <summary>
+        /// Event function is called when new texture format is selected from <see cref="_textureImportFormatMenu"/>.
+        /// </summary>
+        /// <param name="userdata"></param>
         private void OnSelectTextureFormat(object userdata)
         {
             _textureImporterFormat = (TextureImporterFormat) userdata;

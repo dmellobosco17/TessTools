@@ -7,7 +7,7 @@ namespace TessTools.Editor
         [MenuItem("TessTools/TessTextureEditor")]
         static void OpenTessTextureEditor()
         {
-            TessTextureFormatWindow.Show();
+            TessTextureFormatWindow.ShowWindow();
         }
     }
 }
